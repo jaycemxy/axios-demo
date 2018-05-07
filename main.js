@@ -1,78 +1,114 @@
 fakeData()
 
-let model = {
+function Model(options) {
+    this.data = options.data
+    this.resource = options.resource
+}
+Model.prototype.fetch = function (id) {
+    return axios.get(`/${this.resource}s/${id}`).then((response) => {
+        this.data = response.data
+        console.log(this.data)
+        return response
+    })
+}
+Model.prototype.update = function (data) {
+    let id = this.data.id
+
+    return axios.put(`/${this.resource}s/${id}`, data).then((response) => {
+        this.data = response.data
+        console.log('response')
+        console.log(response)
+        return response
+    })
+}
+
+function View({
+    el,
+    template
+}) {
+    this.el = el
+    this.template = template
+}
+View.prototype.render = function (data) {
+    let html = this.template
+    for (let key in data) {
+        html = html.replace(`__${key}__`, data[key])
+    }
+    $(this.el).html(html)
+}
+
+
+// ----------  上面是 MVC 类，下面是对象
+let model = new Model({
     data: {
         name: '',
         number: 0,
         id: ''
     },
-    fetch(id) {
-        return axios.get(`/books/${id}`).then((response) => {
-            this.data = response.data
-            return response
-        })
-    },
-    updata(data) {
-        let id = this.data.id
-        return axios.put(`/books/${id}`, data).then((response) => {
-            this.data = response.data
-            return response
-        })
-    }
-}
+    resource: 'book'
+})
 
-let view = {
+let view = new View({
     el: '#app',
     template: `
-        <div>
-        书名：《 __name__》 
-        数量： <span id = "number"> __number__ </span>
-        </div> 
-        <div>
-        <button id = "addOne"> 加1 </button>
-        <button id = "minusOne"> 减1 </button> 
-        <button id = "reset"> 归零 </button> 
-        </div>
-    `,
-    render(data) {
-        let html = this.template.replace('__name__', data.name)
-            .replace('__number__', data.number)
-        $(this.el).html(html)
-    }
-}
+    <div>
+    书名：《__name__》
+    数量：<span id=number>__number__</span>
+    </div>
+    <div>
+      <button id="addOne">加1</button>
+      <button id="minusOne">减1</button>
+      <button id="reset">归零</button>
+    </div>
+  `
+})
 
 var controller = {
     init(options) {
+
         let view = options.view
         let model = options.model
         this.view = view
         this.model = model
+
         this.view.render(this.model.data)
+
         this.bindEvents()
         this.model.fetch(1).then(() => {
+            console.log('this.model.data')
+            console.log(this.model.data)
             this.view.render(this.model.data)
         })
+
     },
     addOne() {
-        var oldNumber = $('#number').text()
+        var oldNumber = $('#number').text() // string
         var newNumber = oldNumber - 0 + 1
-        this.model.updata({
+        this.model.update({
+            number: newNumber
+        }).then(() => {
+            this.view.render(this.model.data)
+        })
+
+    },
+    minusOne() {
+        var oldNumber = $('#number').text() // string
+        var newNumber = oldNumber - 0 - 1
+        this.model.update({
             number: newNumber
         }).then(() => {
             this.view.render(this.model.data)
         })
     },
-    minusOne() {
-        var oldNumber = $('#number').text()
-        var newNumber = oldNumber - 0 - 1
-        this.model.updata({
-            number: newNumber
+    reset() {
+        this.model.update({
+            number: 0
         }).then(() => {
             this.view.render(this.model.data)
         })
     },
     bindEvents() {
-        //this === controller
+        // this === controller
         $(this.view.el).on('click', '#addOne', this.addOne.bind(this))
         $(this.view.el).on('click', '#minusOne', this.minusOne.bind(this))
         $(this.view.el).on('click', '#reset', this.reset.bind(this))
@@ -85,7 +121,10 @@ controller.init({
 })
 
 
-//在真正返回response之前使用
+
+
+
+// 不要看
 function fakeData() {
     let book = {
         name: 'JavaScript 高级程序设计',
@@ -93,9 +132,6 @@ function fakeData() {
         id: 1
     }
     axios.interceptors.response.use(function (response) {
-        //let config = response.config
-        //let {method, url, data} = config  //这里data是请求的data
-        //在ES6语法下，下面一句 === 上面两句
         let {
             config: {
                 method,
@@ -114,5 +150,3 @@ function fakeData() {
         return response
     })
 }
-
-/*上面是用axios模拟出来的假后台*/
